@@ -25,7 +25,7 @@ struct DHCP_Test_ToolApp: App {
                 Button {
                     isAboutPresented = true
                 } label: {
-                    Label("About Nudgr", systemImage: "info.circle")
+                    Label("About DHCP Test Tool", systemImage: "info.circle")
                 }
             }
         }

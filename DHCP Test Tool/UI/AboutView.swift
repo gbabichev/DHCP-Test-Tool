@@ -33,9 +33,9 @@ struct AboutView: View {
             LiveAppIconView()
             
             VStack(spacing: 4) {
-                Text("Nudgr")
+                Text("DHCP Test Tool")
                     .font(.title.weight(.semibold))
-                Text("Simple tool to test Nudge configurations.")
+                Text("Simple tool to test DHCP responses")
                     .foregroundColor(.secondary)
             }
             
@@ -68,7 +68,7 @@ struct AboutView: View {
             
             Divider()
             
-            Text("Nudgr is a small macOS utility for inspecting Nudge configuration files and the SOFA feed, with tools to simulate and control Nudge behavior during testing.")
+            Text("DHCP Test Tool is a macOS Utility for sending a DHCP discover message, and readings the response.")
                 .font(.callout)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
