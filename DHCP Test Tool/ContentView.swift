@@ -16,11 +16,11 @@ struct ContentView: View {
     @State private var hasRun = false
     @State private var errorMessage: String?
     @State private var results: [DHCPServerInfo] = []
-
+    
     var body: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 16) {
-
+                
                 GroupBox {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -47,7 +47,7 @@ struct ContentView: View {
                         .bold()
                         .font(.title2)
                 }
-
+                
                 if let errorMessage {
                     Text(errorMessage)
                         .foregroundStyle(.red)
@@ -55,7 +55,7 @@ struct ContentView: View {
                     Text("No DHCP servers responded.")
                         .foregroundStyle(.secondary)
                 }
-
+                
                 
                 GroupBox {
                     if results.isEmpty {
@@ -110,7 +110,7 @@ struct ContentView: View {
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
+            
             if isRunning {
                 ZStack {
                     Color.black.opacity(0.15)
@@ -131,7 +131,7 @@ struct ContentView: View {
                     Label("Clear Results", systemImage: "xmark.circle")
                 }
                 .disabled(isRunning || (results.isEmpty && errorMessage == nil))
-
+                
                 Button {
                     runQuery()
                 } label: {
@@ -141,20 +141,20 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func runQuery() {
         isRunning = true
         errorMessage = nil
         results = []
         hasRun = true
-
+        
         let config = DHCPQueryConfig(
             timeout: timeout,
             count: count,
             mac: macAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : macAddress,
             hostname: hostname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : hostname
         )
-
+        
         Task {
             do {
                 let servers = try await DHCPClient().query(config: config)
@@ -175,7 +175,7 @@ struct ContentView: View {
 private struct InfoRow: View {
     let label: String
     let value: String
-
+    
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(label + ":")

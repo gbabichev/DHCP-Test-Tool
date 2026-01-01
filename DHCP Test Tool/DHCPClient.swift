@@ -33,7 +33,7 @@ enum DHCPError: LocalizedError {
     case sendFailed
     case invalidMac
     case receiveFailed
-
+    
     var errorDescription: String? {
         switch self {
         case .permissionDenied:
@@ -56,7 +56,7 @@ final class DHCPClient {
     nonisolated static func defaultHostname() -> String {
         Host.current().localizedName ?? Host.current().name ?? "SwiftDHCP"
     }
-
+    
     nonisolated func query(config: DHCPQueryConfig) async throws -> [DHCPServerInfo] {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -69,7 +69,7 @@ final class DHCPClient {
             }
         }
     }
-
+    
     nonisolated private func querySync(config: DHCPQueryConfig) throws -> [DHCPServerInfo] {
         let macBytes: [UInt8]
         if let mac = config.mac, !mac.isEmpty {
@@ -80,39 +80,39 @@ final class DHCPClient {
         } else {
             macBytes = defaultMacBytes()
         }
-
+        
         let xid = UInt32.random(in: 0...UInt32.max)
         let discover = buildDiscover(mac: macBytes, xid: xid, hostname: config.hostname)
-
+        
         let packets = try DHCPSocket.sendDiscoverAndCollectResponses(
             discover: discover,
             timeout: config.timeout,
             maxResponses: config.count
         )
-
+        
         var servers: [String: DHCPServerInfo] = [:]
         for packetInfo in packets {
             let packet = packetInfo.data
             if packet.count < 240 {
                 continue
             }
-
+            
             guard let op = packet.byte(at: 0), op == 2 else { continue }
             guard let htype = packet.byte(at: 1), let hlen = packet.byte(at: 2), htype == 1, hlen == 6 else { continue }
-
+            
             guard let responseXid = packet.readUInt32(at: 4) else { continue }
             guard responseXid == xid else { continue }
-
+            
             let yiaddr = packet.subdata(in: 16..<20)
             let offer = ipString(from: yiaddr) ?? "0.0.0.0"
-
+            
             let options = parseOptions(from: packet)
             if let messageType = options[53], !(messageType == Data([2]) || messageType == Data([5])) {
                 continue
             }
-
+            
             let serverId = ipString(from: options[54]) ?? ipString(from: packetInfo.source) ?? "unknown"
-
+            
             let info = DHCPServerInfo(
                 id: serverId,
                 offer: offer,
@@ -124,7 +124,7 @@ final class DHCPClient {
             )
             servers[serverId] = info
         }
-
+        
         return servers.keys.sorted().compactMap { servers[$0] }
     }
 }
@@ -142,7 +142,7 @@ nonisolated private func buildDiscover(mac: [UInt8], xid: UInt32, hostname: Stri
     data.appendUInt32(0)
     data.appendUInt32(0)
     data.appendUInt32(0)
-
+    
     var chaddr = mac
     if chaddr.count < 16 {
         chaddr += Array(repeating: 0, count: 16 - chaddr.count)
@@ -150,10 +150,10 @@ nonisolated private func buildDiscover(mac: [UInt8], xid: UInt32, hostname: Stri
     data.append(contentsOf: chaddr)
     data.append(contentsOf: Array(repeating: 0, count: 64))
     data.append(contentsOf: Array(repeating: 0, count: 128))
-
+    
     data.append(contentsOf: [0x63, 0x82, 0x53, 0x63])
     data.append(contentsOf: [0x35, 0x01, 0x01])
-
+    
     if let hostname, !hostname.isEmpty {
         let name = hostname.data(using: .ascii, allowLossyConversion: true) ?? Data()
         let clipped = name.prefix(63)
@@ -161,7 +161,7 @@ nonisolated private func buildDiscover(mac: [UInt8], xid: UInt32, hostname: Stri
         data.appendUInt8(UInt8(clipped.count))
         data.append(clipped)
     }
-
+    
     data.append(contentsOf: [0x37, 0x03, 0x01, 0x03, 0x06])
     data.appendUInt8(0xff)
     return data
@@ -172,10 +172,10 @@ nonisolated private func parseOptions(from packet: Data) -> [UInt8: Data] {
     guard let range = packet.range(of: cookie) else {
         return [:]
     }
-
+    
     var index = range.upperBound
     var options: [UInt8: Data] = [:]
-
+    
     while index < packet.count {
         let code = packet[index]
         if code == 255 { break }
@@ -191,7 +191,7 @@ nonisolated private func parseOptions(from packet: Data) -> [UInt8: Data] {
         options[code] = packet.subdata(in: start..<end)
         index = end
     }
-
+    
     return options
 }
 

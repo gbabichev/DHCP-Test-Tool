@@ -55,11 +55,11 @@ nonisolated func defaultMacBytes() -> [UInt8] {
             }
         }
     }
-
+    
     if result.count == 6 {
         return result
     }
-
+    
     return (0..<6).map { _ in UInt8.random(in: 0...255) }
 }
 
@@ -67,28 +67,28 @@ extension Data {
     nonisolated mutating func appendUInt8(_ value: UInt8) {
         append(contentsOf: [value])
     }
-
+    
     nonisolated mutating func appendUInt16(_ value: UInt16) {
         var big = value.bigEndian
         unsafe Swift.withUnsafeBytes(of: &big) { unsafe append(contentsOf: $0) }
     }
-
+    
     nonisolated mutating func appendUInt32(_ value: UInt32) {
         var big = value.bigEndian
         unsafe Swift.withUnsafeBytes(of: &big) { unsafe append(contentsOf: $0) }
     }
-
+    
     nonisolated func byte(at index: Int) -> UInt8? {
         guard index >= 0, index < count else { return nil }
         return self[self.startIndex.advanced(by: index)]
     }
-
+    
     nonisolated func readUInt32(at index: Int) -> UInt32? {
         guard index >= 0, index + 4 <= count else { return nil }
         let slice = self[index..<(index + 4)]
         return UInt32(slice[slice.startIndex]) << 24
-            | UInt32(slice[slice.startIndex.advanced(by: 1)]) << 16
-            | UInt32(slice[slice.startIndex.advanced(by: 2)]) << 8
-            | UInt32(slice[slice.startIndex.advanced(by: 3)])
+        | UInt32(slice[slice.startIndex.advanced(by: 1)]) << 16
+        | UInt32(slice[slice.startIndex.advanced(by: 2)]) << 8
+        | UInt32(slice[slice.startIndex.advanced(by: 3)])
     }
 }

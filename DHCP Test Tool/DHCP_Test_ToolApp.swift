@@ -7,11 +7,27 @@
 
 import SwiftUI
 
+
 @main
 struct DHCP_Test_ToolApp: App {
+    
+    @State private var isAboutPresented: Bool = false
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .sheet(isPresented: $isAboutPresented) {
+                    AboutOverlay(isPresented: $isAboutPresented)
+                }
+        }
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button {
+                    isAboutPresented = true
+                } label: {
+                    Label("About Nudgr", systemImage: "info.circle")
+                }
+            }
         }
     }
 }
