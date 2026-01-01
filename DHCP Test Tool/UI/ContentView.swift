@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var count: Int = 5
     @State private var macAddress: String = ""
     @State private var hostname: String = DHCPClient.defaultHostname()
+    @State private var interfaces: [NetworkInterface] = []
+    @State private var selectedInterfaceName: String = ""
     @State private var isRunning = false
     @State private var hasRun = false
     @State private var errorMessage: String?
@@ -38,6 +40,20 @@ struct ContentView: View {
                                 in: 1...25,
                                 step: 1
                             )
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Picker("Network Device", selection: $selectedInterfaceName) {
+                                ForEach(interfaces) { device in
+                                    Text(device.displayName)
+                                        .tag(device.name)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            if interfaces.isEmpty {
+                                Text("No active network interfaces detected.")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
                         }
                         TextField("Client MAC (optional)", text: $macAddress)
                         TextField("Hostname", text: $hostname)
@@ -121,6 +137,9 @@ struct ContentView: View {
                 }
             }
         }
+        .onAppear {
+            refreshInterfaces()
+        }
         .toolbar {
             ToolbarItemGroup {
                 Button {
@@ -152,7 +171,8 @@ struct ContentView: View {
             timeout: timeout,
             count: count,
             mac: macAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : macAddress,
-            hostname: hostname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : hostname
+            hostname: hostname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : hostname,
+            interfaceName: selectedInterfaceName.isEmpty ? nil : selectedInterfaceName
         )
         
         Task {
@@ -168,6 +188,14 @@ struct ContentView: View {
                     isRunning = false
                 }
             }
+        }
+    }
+    
+    private func refreshInterfaces() {
+        let devices = activeNetworkInterfaces()
+        interfaces = devices
+        if selectedInterfaceName.isEmpty, let first = devices.first {
+            selectedInterfaceName = first.name
         }
     }
 }

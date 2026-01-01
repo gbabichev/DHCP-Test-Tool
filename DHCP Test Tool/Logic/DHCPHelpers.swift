@@ -9,6 +9,14 @@
 import Foundation
 import Darwin
 
+struct NetworkInterface: Identifiable, Hashable {
+    let name: String
+    let address: String
+    
+    var id: String { name }
+    var displayName: String { "\(name) (\(address))" }
+}
+
 nonisolated func ipString(from option: Data?) -> String? {
     guard let option, option.count == 4 else { return nil }
     var value: in_addr_t = 0
@@ -20,6 +28,73 @@ nonisolated func ipString(from addr: in_addr) -> String? {
     let addr = addr
     guard let cString = unsafe inet_ntoa(addr) else { return nil }
     return unsafe String(cString: cString)
+}
+
+nonisolated func activeNetworkInterfaces() -> [NetworkInterface] {
+    var found: [String: NetworkInterface] = [:]
+    var ifaddrPointer: UnsafeMutablePointer<ifaddrs>?
+    if unsafe getifaddrs(&ifaddrPointer) == 0, let first = unsafe ifaddrPointer {
+        defer { unsafe freeifaddrs(ifaddrPointer) }
+        var pointer = unsafe first
+        while true {
+            let ifaddr = unsafe pointer.pointee
+            let flags = unsafe ifaddr.ifa_flags
+            if let addr = unsafe ifaddr.ifa_addr, unsafe addr.pointee.sa_family == UInt8(AF_INET) {
+                let name = unsafe String(cString: ifaddr.ifa_name)
+                if (flags & UInt32(IFF_UP)) != 0,
+                   (flags & UInt32(IFF_RUNNING)) != 0,
+                   (flags & UInt32(IFF_LOOPBACK)) == 0 {
+                    let sockaddr = unsafe addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { unsafe $0.pointee }
+                    if let ip = ipString(from: sockaddr.sin_addr) {
+                        if found[name] == nil {
+                            found[name] = NetworkInterface(name: name, address: ip)
+                        }
+                    }
+                }
+            }
+            if let next = unsafe ifaddr.ifa_next {
+                unsafe pointer = unsafe next
+            } else {
+                break
+            }
+        }
+    }
+    
+    return found.values.sorted { $0.name < $1.name }
+}
+
+nonisolated func macBytesForInterface(_ interfaceName: String) -> [UInt8]? {
+    var ifaddrPointer: UnsafeMutablePointer<ifaddrs>?
+    if unsafe getifaddrs(&ifaddrPointer) == 0, let first = unsafe ifaddrPointer {
+        defer { unsafe freeifaddrs(ifaddrPointer) }
+        var pointer = unsafe first
+        while true {
+            let ifaddr = unsafe pointer.pointee
+            let name = unsafe String(cString: ifaddr.ifa_name)
+            if name == interfaceName,
+               let addr = unsafe ifaddr.ifa_addr,
+               unsafe addr.pointee.sa_family == UInt8(AF_LINK) {
+                let sdlPtr = unsafe UnsafeRawPointer(addr).assumingMemoryBound(to: sockaddr_dl.self)
+                let sdl = unsafe sdlPtr.pointee
+                if sdl.sdl_alen == 6, let base = MemoryLayout<sockaddr_dl>.offset(of: \sockaddr_dl.sdl_data) {
+                    let start = base + Int(sdl.sdl_nlen)
+                    let macPtr = unsafe UnsafeRawPointer(sdlPtr)
+                        .advanced(by: start)
+                        .assumingMemoryBound(to: UInt8.self)
+                    let bytes = (0..<Int(sdl.sdl_alen)).map { unsafe macPtr[$0] }
+                    if bytes.count == 6 {
+                        return bytes
+                    }
+                }
+            }
+            if let next = unsafe ifaddr.ifa_next {
+                unsafe pointer = unsafe next
+            } else {
+                break
+            }
+        }
+    }
+    return nil
 }
 
 nonisolated func defaultMacBytes() -> [UInt8] {

@@ -14,6 +14,7 @@ struct DHCPQueryConfig {
     var count: Int
     var mac: String?
     var hostname: String?
+    var interfaceName: String?
 }
 
 struct DHCPServerInfo: Identifiable, Hashable {
@@ -33,6 +34,7 @@ enum DHCPError: LocalizedError {
     case sendFailed
     case invalidMac
     case receiveFailed
+    case interfaceUnavailable
     
     var errorDescription: String? {
         switch self {
@@ -48,6 +50,8 @@ enum DHCPError: LocalizedError {
             return "MAC must be 6 bytes like aa:bb:cc:dd:ee:ff."
         case .receiveFailed:
             return "Failed while receiving DHCP responses."
+        case .interfaceUnavailable:
+            return "Selected network interface is unavailable."
         }
     }
 }
@@ -78,7 +82,14 @@ final class DHCPClient {
             }
             macBytes = parsed
         } else {
-            macBytes = defaultMacBytes()
+            if let interfaceName = config.interfaceName,
+               let interfaceMac = macBytesForInterface(interfaceName) {
+                macBytes = interfaceMac
+            } else if config.interfaceName != nil {
+                throw DHCPError.interfaceUnavailable
+            } else {
+                macBytes = defaultMacBytes()
+            }
         }
         
         let xid = UInt32.random(in: 0...UInt32.max)
@@ -87,7 +98,8 @@ final class DHCPClient {
         let packets = try DHCPSocket.sendDiscoverAndCollectResponses(
             discover: discover,
             timeout: config.timeout,
-            maxResponses: config.count
+            maxResponses: config.count,
+            interfaceName: config.interfaceName
         )
         
         var servers: [String: DHCPServerInfo] = [:]

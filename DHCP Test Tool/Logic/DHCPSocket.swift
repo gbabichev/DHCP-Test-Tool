@@ -18,13 +18,31 @@ enum DHCPSocket {
     nonisolated static func sendDiscoverAndCollectResponses(
         discover: Data,
         timeout: TimeInterval,
-        maxResponses: Int
+        maxResponses: Int,
+        interfaceName: String?
     ) throws -> [DHCPPacket] {
         let sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard sock >= 0 else {
             throw DHCPError.socketFailed
         }
         defer { close(sock) }
+        
+        if let interfaceName {
+            var index = unsafe if_nametoindex(interfaceName)
+            guard index != 0 else {
+                throw DHCPError.interfaceUnavailable
+            }
+            let result = unsafe setsockopt(
+                sock,
+                IPPROTO_IP,
+                IP_BOUND_IF,
+                &index,
+                socklen_t(MemoryLayout<UInt32>.size)
+            )
+            if result < 0 {
+                throw DHCPError.interfaceUnavailable
+            }
+        }
         
         var yes: Int32 = 1
         unsafe setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &yes, socklen_t(MemoryLayout<Int32>.size))
