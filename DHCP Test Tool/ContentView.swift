@@ -18,83 +18,118 @@ struct ContentView: View {
     @State private var results: [DHCPServerInfo] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        ZStack {
+            VStack(alignment: .leading, spacing: 16) {
 
-            GroupBox("Query Settings") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Timeout (sec)")
-                        TextField("", value: $timeout, format: .number)
-                            .frame(width: 80)
+                GroupBox("Query Settings") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Timeout (sec)")
+                            TextField("", value: $timeout, format: .number)
+                                .frame(width: 80)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Max responses: \(count)")
+                            Slider(
+                                value: Binding(
+                                    get: { Double(count) },
+                                    set: { count = Int($0) }
+                                ),
+                                in: 1...25,
+                                step: 1
+                            )
+                        }
+                        TextField("Client MAC (optional)", text: $macAddress)
+                        TextField("Hostname", text: $hostname)
                     }
-                    Stepper("Max responses: \(count)", value: $count, in: 1...25)
-                    TextField("Client MAC (optional)", text: $macAddress)
-                    TextField("Hostname", text: $hostname)
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                } else if hasRun && !isRunning && results.isEmpty {
+                    Text("No DHCP servers responded.")
+                        .foregroundStyle(.secondary)
+                }
+
+                GroupBox("Responses") {
+                    if results.isEmpty {
+                        Text(hasRun ? "No responses yet." : "Run a query to list responding DHCP servers.")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+                    } else {
+                        ScrollView {
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12)
+                                ],
+                                alignment: .leading,
+                                spacing: 12
+                            ) {
+                                ForEach(results) { server in
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(server.id)
+                                            .font(.headline)
+                                        InfoRow(label: "Offer", value: server.offer)
+                                        if let subnet = server.subnet {
+                                            InfoRow(label: "Subnet", value: subnet)
+                                        }
+                                        if !server.router.isEmpty {
+                                            InfoRow(label: "Router", value: server.router.joined(separator: ", "))
+                                        }
+                                        if !server.dns.isEmpty {
+                                            InfoRow(label: "DNS", value: server.dns.joined(separator: ", "))
+                                        }
+                                        if let lease = server.lease {
+                                            InfoRow(label: "Lease", value: "\(lease)s")
+                                        }
+                                        if let vendor = server.vendor, !vendor.isEmpty {
+                                            InfoRow(label: "Vendor", value: vendor)
+                                        }
+                                    }
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                        .frame(minHeight: 180)
+                    }
+                }
             }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             if isRunning {
-                ProgressView("Listening for DHCP responses...")
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-            } else if hasRun && results.isEmpty {
-                Text("No DHCP servers responded.")
-                    .foregroundStyle(.secondary)
-            }
-
-            GroupBox("Responses") {
-                if results.isEmpty {
-                    Text(hasRun ? "No responses yet." : "Run a query to list responding DHCP servers.")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-                } else {
-                    List(results) { server in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(server.id)
-                                .font(.headline)
-                            Text("offer: \(server.offer)")
-                            if let subnet = server.subnet {
-                                Text("subnet: \(subnet)")
-                            }
-                            if !server.router.isEmpty {
-                                Text("router: \(server.router.joined(separator: ", "))")
-                            }
-                            if !server.dns.isEmpty {
-                                Text("dns: \(server.dns.joined(separator: ", "))")
-                            }
-                            if let lease = server.lease {
-                                Text("lease: \(lease)s")
-                            }
-                            if let vendor = server.vendor, !vendor.isEmpty {
-                                Text("vendor: \(vendor)")
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .frame(minHeight: 180)
+                ZStack {
+                    Color.black.opacity(0.15)
+                        .ignoresSafeArea()
+                    ProgressView("Listening for DHCP responses...")
+                        .padding(16)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
             }
         }
-        .padding()
-        //.frame(minWidth: 520, minHeight: 560)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .toolbar {
             ToolbarItemGroup {
-                Button(isRunning ? "Querying..." : "Query DHCP Servers") {
-                    runQuery()
-                }
-                .disabled(isRunning)
-
-                Button("Clear Results") {
+                Button {
                     results = []
                     errorMessage = nil
                     hasRun = false
+                } label: {
+                    Label("Clear Results", systemImage: "xmark.circle")
                 }
                 .disabled(isRunning || (results.isEmpty && errorMessage == nil))
+
+                Button {
+                    runQuery()
+                } label: {
+                    Label(isRunning ? "Querying..." : "Query DHCP Servers", systemImage: "play.fill")
+                }
+                .disabled(isRunning)
             }
         }
     }
@@ -126,5 +161,21 @@ struct ContentView: View {
                 }
             }
         }
+    }
+}
+
+private struct InfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label + ":")
+                .foregroundStyle(.secondary)
+                .frame(width: 70, alignment: .leading)
+            Text(value)
+                .textSelection(.enabled)
+        }
+        .font(.callout)
     }
 }
