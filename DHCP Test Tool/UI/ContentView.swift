@@ -42,13 +42,22 @@ struct ContentView: View {
                             )
                         }
                         VStack(alignment: .leading, spacing: 6) {
-                            Picker("Network Device", selection: $selectedInterfaceName) {
-                                ForEach(interfaces) { device in
-                                    Text(device.displayName)
-                                        .tag(device.name)
+                            HStack(spacing: 8) {
+                                Picker("Network Device", selection: $selectedInterfaceName) {
+                                    ForEach(interfaces) { device in
+                                        Text(device.displayName)
+                                            .tag(device.name)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                Button {
+                                    refreshInterfaces()
+                                } label: {
+                                    Label("Refresh", systemImage: "arrow.clockwise")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Reload active network devices")
                             }
-                            .pickerStyle(.menu)
                             if interfaces.isEmpty {
                                 Text("No active network interfaces detected.")
                                     .foregroundStyle(.secondary)
