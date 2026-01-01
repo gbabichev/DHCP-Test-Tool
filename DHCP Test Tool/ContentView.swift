@@ -19,9 +19,6 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("DHCP Test Tool")
-                .font(.title2)
-                .bold()
 
             GroupBox("Query Settings") {
                 VStack(alignment: .leading, spacing: 12) {
@@ -35,20 +32,6 @@ struct ContentView: View {
                     TextField("Hostname", text: $hostname)
                 }
                 .padding(.top, 4)
-            }
-
-            HStack(spacing: 12) {
-                Button(isRunning ? "Querying..." : "Query DHCP Servers") {
-                    runQuery()
-                }
-                .disabled(isRunning)
-
-                Button("Clear Results") {
-                    results = []
-                    errorMessage = nil
-                    hasRun = false
-                }
-                .disabled(isRunning || (results.isEmpty && errorMessage == nil))
             }
 
             if isRunning {
@@ -97,7 +80,23 @@ struct ContentView: View {
             }
         }
         .padding()
-        .frame(minWidth: 520, minHeight: 560)
+        //.frame(minWidth: 520, minHeight: 560)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .toolbar {
+            ToolbarItemGroup {
+                Button(isRunning ? "Querying..." : "Query DHCP Servers") {
+                    runQuery()
+                }
+                .disabled(isRunning)
+
+                Button("Clear Results") {
+                    results = []
+                    errorMessage = nil
+                    hasRun = false
+                }
+                .disabled(isRunning || (results.isEmpty && errorMessage == nil))
+            }
+        }
     }
 
     private func runQuery() {
