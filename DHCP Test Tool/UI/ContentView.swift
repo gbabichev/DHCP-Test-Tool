@@ -64,8 +64,26 @@ struct ContentView: View {
                                     .font(.caption)
                             }
                         }
-                        TextField("Client MAC (optional)", text: $macAddress)
-                        TextField("Hostname", text: $hostname)
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Spoof MAC Address")
+                                Text("Overrides the client MAC used in the DHCP discover.")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                            .frame(width: 170, alignment: .leading)
+                            TextField("Client MAC (optional)", text: $macAddress)
+                        }
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Client Hostname")
+                                Text("Sets the hostname option sent to DHCP servers.")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                            .frame(width: 170, alignment: .leading)
+                            TextField("Hostname", text: $hostname)
+                        }
                     }
                 } label: {
                     Text("Query Settings")
