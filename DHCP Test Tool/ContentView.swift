@@ -21,7 +21,7 @@ struct ContentView: View {
         ZStack {
             VStack(alignment: .leading, spacing: 16) {
 
-                GroupBox("Query Settings") {
+                GroupBox {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Timeout (sec)")
@@ -42,7 +42,10 @@ struct ContentView: View {
                         TextField("Client MAC (optional)", text: $macAddress)
                         TextField("Hostname", text: $hostname)
                     }
-                    .padding(.top, 4)
+                } label: {
+                    Text("Query Settings")
+                        .bold()
+                        .font(.title2)
                 }
 
                 if let errorMessage {
@@ -53,7 +56,8 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                GroupBox("Responses") {
+                
+                GroupBox {
                     if results.isEmpty {
                         Text(hasRun ? "No responses yet." : "Run a query to list responding DHCP servers.")
                             .foregroundStyle(.secondary)
@@ -98,6 +102,10 @@ struct ContentView: View {
                         }
                         .frame(minHeight: 180)
                     }
+                } label: {
+                    Text("Responses")
+                        .bold()
+                        .font(.title2)
                 }
             }
             .padding()
