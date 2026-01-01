@@ -4,6 +4,7 @@
 //
 //  Created by George Babichev on 12/31/25.
 //
+//  High-level DHCP query orchestration: builds packets, parses responses, and aggregates server info.
 
 import Foundation
 import Darwin
@@ -83,84 +84,15 @@ final class DHCPClient {
         let xid = UInt32.random(in: 0...UInt32.max)
         let discover = buildDiscover(mac: macBytes, xid: xid, hostname: config.hostname)
 
-        let sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-        guard sock >= 0 else {
-            throw DHCPError.socketFailed
-        }
-        defer { close(sock) }
-
-        var yes: Int32 = 1
-        unsafe setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &yes, socklen_t(MemoryLayout<Int32>.size))
-
-        var bindAddr = sockaddr_in()
-        bindAddr.sin_family = sa_family_t(AF_INET)
-        bindAddr.sin_port = in_port_t(68).bigEndian
-        bindAddr.sin_addr = in_addr(s_addr: in_addr_t(0))
-
-        let bindResult = unsafe withUnsafePointer(to: &bindAddr) {
-            unsafe $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                unsafe Darwin.bind(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
-        }
-        if bindResult < 0 {
-            if errno == EACCES {
-                throw DHCPError.permissionDenied
-            }
-            throw DHCPError.bindFailed
-        }
-
-        var dest = sockaddr_in()
-        dest.sin_family = sa_family_t(AF_INET)
-        dest.sin_port = in_port_t(67).bigEndian
-        dest.sin_addr = in_addr(s_addr: in_addr_t(INADDR_BROADCAST).bigEndian)
-
-        let sendResult = discover.withUnsafeBytes { rawBuffer in
-            withUnsafePointer(to: &dest) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    sendto(sock, rawBuffer.baseAddress, rawBuffer.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
-                }
-            }
-        }
-        guard sendResult >= 0 else {
-            throw DHCPError.sendFailed
-        }
+        let packets = try DHCPSocket.sendDiscoverAndCollectResponses(
+            discover: discover,
+            timeout: config.timeout,
+            maxResponses: config.count
+        )
 
         var servers: [String: DHCPServerInfo] = [:]
-        let deadline = Date().addingTimeInterval(config.timeout)
-
-        while servers.count < config.count && Date() < deadline {
-            let remaining = deadline.timeIntervalSinceNow
-            if remaining <= 0 {
-                break
-            }
-
-            var pollFd = pollfd(fd: sock, events: Int16(POLLIN), revents: 0)
-            let timeoutMs = Int32(min(Double(Int32.max), max(0, remaining * 1000)))
-            let ready = Darwin.poll(&pollFd, 1, timeoutMs)
-            if ready == 0 {
-                break
-            }
-            if ready < 0 {
-                throw DHCPError.receiveFailed
-            }
-            if (pollFd.revents & Int16(POLLIN)) == 0 {
-                continue
-            }
-
-            var buffer = [UInt8](repeating: 0, count: 2048)
-            var src = sockaddr_in()
-            var srcLen = socklen_t(MemoryLayout<sockaddr_in>.size)
-
-            let recvCount = withUnsafeMutablePointer(to: &src) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    recvfrom(sock, &buffer, buffer.count, 0, $0, &srcLen)
-                }
-            }
-            if recvCount <= 0 {
-                continue
-            }
-
-            let packet = Data(buffer.prefix(recvCount))
+        for packetInfo in packets {
+            let packet = packetInfo.data
             if packet.count < 240 {
                 continue
             }
@@ -179,7 +111,7 @@ final class DHCPClient {
                 continue
             }
 
-            let serverId = ipString(from: options[54]) ?? ipString(from: src.sin_addr) ?? "unknown"
+            let serverId = ipString(from: options[54]) ?? ipString(from: packetInfo.source) ?? "unknown"
 
             let info = DHCPServerInfo(
                 id: serverId,
@@ -263,19 +195,6 @@ nonisolated private func parseOptions(from packet: Data) -> [UInt8: Data] {
     return options
 }
 
-nonisolated private func ipString(from option: Data?) -> String? {
-    guard let option, option.count == 4 else { return nil }
-    var value: in_addr_t = 0
-    _ = withUnsafeMutableBytes(of: &value) { option.copyBytes(to: $0) }
-    return ipString(from: in_addr(s_addr: value))
-}
-
-nonisolated private func ipString(from addr: in_addr) -> String? {
-    var addr = addr
-    guard let cString = inet_ntoa(addr) else { return nil }
-    return String(cString: cString)
-}
-
 nonisolated private func listFromOption(_ option: Data?) -> [String] {
     guard let option, option.count % 4 == 0 else { return [] }
     var result: [String] = []
@@ -303,75 +222,4 @@ nonisolated private func parseMac(_ mac: String) -> [UInt8]? {
         bytes.append(value)
     }
     return bytes
-}
-
-nonisolated private func defaultMacBytes() -> [UInt8] {
-    var result: [UInt8] = []
-    var ifaddrPointer: UnsafeMutablePointer<ifaddrs>?
-    if getifaddrs(&ifaddrPointer) == 0, let first = ifaddrPointer {
-        defer { freeifaddrs(ifaddrPointer) }
-        var pointer = first
-        while true {
-            let ifaddr = pointer.pointee
-            let name = String(cString: ifaddr.ifa_name)
-            if let addr = ifaddr.ifa_addr, addr.pointee.sa_family == UInt8(AF_LINK) {
-                let sdlPtr = UnsafeRawPointer(addr).assumingMemoryBound(to: sockaddr_dl.self)
-                let sdl = sdlPtr.pointee
-                if sdl.sdl_alen == 6, let base = MemoryLayout<sockaddr_dl>.offset(of: \sockaddr_dl.sdl_data) {
-                    let start = base + Int(sdl.sdl_nlen)
-                    let macPtr = UnsafeRawPointer(sdlPtr)
-                        .advanced(by: start)
-                        .assumingMemoryBound(to: UInt8.self)
-                    let bytes = (0..<Int(sdl.sdl_alen)).map { macPtr[$0] }
-                    if bytes.count == 6 {
-                        result = bytes
-                        if name == "en0" {
-                            return result
-                        }
-                    }
-                }
-            }
-            if let next = ifaddr.ifa_next {
-                pointer = next
-            } else {
-                break
-            }
-        }
-    }
-
-    if result.count == 6 {
-        return result
-    }
-
-    return (0..<6).map { _ in UInt8.random(in: 0...255) }
-}
-
-private extension Data {
-    nonisolated mutating func appendUInt8(_ value: UInt8) {
-        append(contentsOf: [value])
-    }
-
-    nonisolated mutating func appendUInt16(_ value: UInt16) {
-        var big = value.bigEndian
-        Swift.withUnsafeBytes(of: &big) { append(contentsOf: $0) }
-    }
-
-    nonisolated mutating func appendUInt32(_ value: UInt32) {
-        var big = value.bigEndian
-        Swift.withUnsafeBytes(of: &big) { append(contentsOf: $0) }
-    }
-
-    nonisolated func byte(at index: Int) -> UInt8? {
-        guard index >= 0, index < count else { return nil }
-        return self[self.startIndex.advanced(by: index)]
-    }
-
-    nonisolated func readUInt32(at index: Int) -> UInt32? {
-        guard index >= 0, index + 4 <= count else { return nil }
-        let slice = self[index..<(index + 4)]
-        return UInt32(slice[slice.startIndex]) << 24
-            | UInt32(slice[slice.startIndex.advanced(by: 1)]) << 16
-            | UInt32(slice[slice.startIndex.advanced(by: 2)]) << 8
-            | UInt32(slice[slice.startIndex.advanced(by: 3)])
-    }
 }
