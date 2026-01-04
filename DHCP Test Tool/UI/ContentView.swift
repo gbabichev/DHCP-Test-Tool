@@ -129,6 +129,7 @@ struct ContentView: View {
                             }
                         }
                     }
+                    .padding(8)
                 } label: {
                     Text("Query Settings")
                         .bold()
