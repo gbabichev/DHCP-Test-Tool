@@ -55,6 +55,8 @@ struct ContentView: View {
                                     Text("Selects the interface used for DHCP discovery.")
                                         .foregroundStyle(.secondary)
                                         .font(.caption)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .frame(width: labelWidth, alignment: .leading)
                                 HStack(spacing: 12) {
@@ -65,6 +67,7 @@ struct ContentView: View {
                                         }
                                     }
                                     .pickerStyle(.menu)
+                                    .labelsHidden()
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     Button {
                                         refreshInterfaces()
@@ -87,6 +90,8 @@ struct ContentView: View {
                                 Text("Overrides the client MAC used in the DHCP discover.")
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
@@ -107,6 +112,8 @@ struct ContentView: View {
                                 Text("Sets the hostname option sent to DHCP servers.")
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
