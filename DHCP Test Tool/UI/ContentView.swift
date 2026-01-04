@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var timeout: Double = 3.0
-    @State private var count: Int = 5
+    @AppStorage("timeoutSeconds") private var timeout: Int = 5
+    @AppStorage("maxResponses") private var count: Int = 5
     @State private var macAddress: String = ""
     @State private var hostname: String = DHCPClient.defaultHostname()
     @State private var interfaces: [NetworkInterface] = []
@@ -24,15 +24,17 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 16) {
                 
                 GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 18) {
                         let labelWidth: CGFloat = 220
                         VStack(alignment: .leading, spacing: 6) {
-                            let timeoutValue = timeout.formatted(.number.precision(.fractionLength(1)))
-                            Text("Timeout (sec): \(timeoutValue)")
+                            Text("Timeout (sec): \(timeout)")
                             Slider(
-                                value: $timeout,
-                                in: 0.5...10,
-                                step: 0.5
+                                value: Binding(
+                                    get: { Double(timeout) },
+                                    set: { timeout = Int($0) }
+                                ),
+                                in: 1...10,
+                                step: 1
                             )
                         }
                         VStack(alignment: .leading, spacing: 6) {
@@ -42,7 +44,7 @@ struct ContentView: View {
                                     get: { Double(count) },
                                     set: { count = Int($0) }
                                 ),
-                                in: 1...25,
+                                in: 1...10,
                                 step: 1
                             )
                         }
@@ -55,14 +57,15 @@ struct ContentView: View {
                                         .font(.caption)
                                 }
                                 .frame(width: labelWidth, alignment: .leading)
-                                HStack(spacing: 8) {
-                                    Picker("Network Device", selection: $selectedInterfaceName) {
+                                HStack(spacing: 12) {
+                                    Picker("", selection: $selectedInterfaceName) {
                                         ForEach(interfaces) { device in
                                             Text(device.displayName)
                                                 .tag(device.name)
                                         }
                                     }
                                     .pickerStyle(.menu)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     Button {
                                         refreshInterfaces()
                                     } label: {
@@ -88,6 +91,7 @@ struct ContentView: View {
                             .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
                                 TextField("Client MAC (optional)", text: $macAddress)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 Button {
                                     macAddress = randomMacAddress()
                                 } label: {
@@ -107,6 +111,7 @@ struct ContentView: View {
                             .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
                                 TextField("Hostname", text: $hostname)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 Button {
                                     hostname = DHCPClient.defaultHostname()
                                 } label: {
@@ -233,7 +238,7 @@ struct ContentView: View {
         hasRun = true
         
         let config = DHCPQueryConfig(
-            timeout: timeout,
+            timeout: Double(timeout),
             count: count,
             mac: macAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : macAddress,
             hostname: hostname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : hostname,
