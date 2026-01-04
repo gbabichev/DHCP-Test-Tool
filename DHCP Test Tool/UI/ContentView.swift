@@ -201,7 +201,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 420)
+        .frame(minWidth: 520, minHeight: 500)
         .onAppear {
             refreshInterfaces()
         }

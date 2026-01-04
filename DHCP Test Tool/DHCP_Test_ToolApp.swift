@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 
 @main
@@ -27,6 +28,14 @@ struct DHCP_Test_ToolApp: App {
                     isAboutPresented = true
                 } label: {
                     Label("About DHCP Test Tool", systemImage: "info.circle")
+                }
+            }
+            CommandGroup(replacing: .help) {
+                Button {
+                    guard let url = URL(string: "https://github.com/gbabichev/DHCP-Test-Tool") else { return }
+                    NSWorkspace.shared.open(url)
+                } label: {
+                    Label("DHCP Test Tool Help", systemImage: "questionmark.circle")
                 }
             }
         }
