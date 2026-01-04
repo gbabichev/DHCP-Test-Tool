@@ -25,10 +25,15 @@ struct ContentView: View {
                 
                 GroupBox {
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Timeout (sec)")
-                            TextField("", value: $timeout, format: .number)
-                                .frame(width: 80)
+                        let labelWidth: CGFloat = 220
+                        VStack(alignment: .leading, spacing: 6) {
+                            let timeoutValue = timeout.formatted(.number.precision(.fractionLength(1)))
+                            Text("Timeout (sec): \(timeoutValue)")
+                            Slider(
+                                value: $timeout,
+                                in: 0.5...10,
+                                step: 0.5
+                            )
                         }
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Max responses: \(count)")
@@ -42,21 +47,30 @@ struct ContentView: View {
                             )
                         }
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 8) {
-                                Picker("Network Device", selection: $selectedInterfaceName) {
-                                    ForEach(interfaces) { device in
-                                        Text(device.displayName)
-                                            .tag(device.name)
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Network Device")
+                                    Text("Selects the interface used for DHCP discovery.")
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                }
+                                .frame(width: labelWidth, alignment: .leading)
+                                HStack(spacing: 8) {
+                                    Picker("Network Device", selection: $selectedInterfaceName) {
+                                        ForEach(interfaces) { device in
+                                            Text(device.displayName)
+                                                .tag(device.name)
+                                        }
                                     }
+                                    .pickerStyle(.menu)
+                                    Button {
+                                        refreshInterfaces()
+                                    } label: {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .help("Reload active network devices")
                                 }
-                                .pickerStyle(.menu)
-                                Button {
-                                    refreshInterfaces()
-                                } label: {
-                                    Label("Refresh", systemImage: "arrow.clockwise")
-                                }
-                                .buttonStyle(.borderless)
-                                .help("Reload active network devices")
                             }
                             if interfaces.isEmpty {
                                 Text("No active network interfaces detected.")
@@ -71,7 +85,7 @@ struct ContentView: View {
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
                             }
-                            .frame(width: 170, alignment: .leading)
+                            .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
                                 TextField("Client MAC (optional)", text: $macAddress)
                                 Button {
@@ -90,7 +104,7 @@ struct ContentView: View {
                                     .foregroundStyle(.secondary)
                                     .font(.caption)
                             }
-                            .frame(width: 170, alignment: .leading)
+                            .frame(width: labelWidth, alignment: .leading)
                             HStack(spacing: 8) {
                                 TextField("Hostname", text: $hostname)
                                 Button {
