@@ -1,7 +1,7 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "extended-gray:1.00000,1.00000",
+      "extended-gray:0.75000,1.00000",
       "extended-gray:0.75000,1.00000"
     ],
     "orientation" : {
@@ -17,11 +17,18 @@
   },
   "groups" : [
     {
-      "blur-material" : 1,
+      "blur-material" : null,
       "layers" : [
         {
           "image-name" : "DHCP.png",
-          "name" : "DHCP"
+          "name" : "DHCP",
+          "position" : {
+            "scale" : 1.15,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
       "shadow" : {

@@ -164,10 +164,16 @@ struct ContentView: View {
                 }
             }
         }
+        .frame(minWidth: 520, minHeight: 420)
         .onAppear {
             refreshInterfaces()
         }
         .toolbar {
+            ToolbarItem(placement: .status) {
+                Text("DHCP Test Tool")
+                    .padding(12)
+                    .bold()
+            }
             ToolbarItemGroup {
                 Button {
                     results = []

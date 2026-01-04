@@ -17,9 +17,10 @@ struct DHCP_Test_ToolApp: App {
         WindowGroup {
             ContentView()
                 .sheet(isPresented: $isAboutPresented) {
-                    AboutOverlay(isPresented: $isAboutPresented)
+                    AboutView()
                 }
         }
+        .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button {
