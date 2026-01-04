@@ -72,7 +72,16 @@ struct ContentView: View {
                                     .font(.caption)
                             }
                             .frame(width: 170, alignment: .leading)
-                            TextField("Client MAC (optional)", text: $macAddress)
+                            HStack(spacing: 8) {
+                                TextField("Client MAC (optional)", text: $macAddress)
+                                Button {
+                                    macAddress = randomMacAddress()
+                                } label: {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Generate a random MAC address")
+                            }
                         }
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -82,7 +91,16 @@ struct ContentView: View {
                                     .font(.caption)
                             }
                             .frame(width: 170, alignment: .leading)
-                            TextField("Hostname", text: $hostname)
+                            HStack(spacing: 8) {
+                                TextField("Hostname", text: $hostname)
+                                Button {
+                                    hostname = DHCPClient.defaultHostname()
+                                } label: {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Reset to the default hostname")
+                            }
                         }
                     }
                 } label: {
@@ -230,6 +248,17 @@ struct ContentView: View {
         if selectedInterfaceName.isEmpty, let first = devices.first {
             selectedInterfaceName = first.name
         }
+    }
+
+    private func randomMacAddress() -> String {
+        var bytes = (0..<6).map { _ in UInt8.random(in: 0...UInt8.max) }
+        bytes[0] = (bytes[0] | 0x02) & 0xFE
+        return bytes
+            .map { byte -> String in
+                let hex = String(byte, radix: 16, uppercase: true)
+                return hex.count == 1 ? "0" + hex : hex
+            }
+            .joined(separator: ":")
     }
 }
 
