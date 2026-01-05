@@ -198,6 +198,7 @@ struct ContentView: View {
             }
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .disabled(isRunning)
             
             if isRunning {
                 ZStack {
@@ -206,6 +207,10 @@ struct ContentView: View {
                     ProgressView("Listening for DHCP responses...")
                         .padding(16)
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.black.opacity(0.8))
+                        )
                 }
             }
         }
@@ -213,7 +218,7 @@ struct ContentView: View {
 //            BetaTag()
 //                .padding(12)
 //        }
-        .frame(minWidth: 520, minHeight: 500)
+        .frame(minWidth: 520, minHeight: 550)
         .onAppear {
             refreshInterfaces()
         }

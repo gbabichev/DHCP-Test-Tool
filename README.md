@@ -21,6 +21,7 @@ macOS SwiftUI app for sending DHCP discover messages and listing responding DHCP
 - Send DHCP discover and collect offers/acks.
 - Select the active network device used for the query.
 - Optional spoofed client MAC and hostname.
+- MAC Address Generator.
 - Shows offer details like subnet, router, DNS, lease time, and vendor.
 
 ## Requirements
@@ -29,7 +30,7 @@ macOS SwiftUI app for sending DHCP discover messages and listing responding DHCP
 ## Usage
 1) Choose the network device to send the DHCP discover.
 2) Optionally set a spoofed MAC address and/or hostname.
-3) Click "Query DHCP Servers" to listen for responses.
+3) Click "Query DHCP Servers" (Play button in Toolbar) to listen for responses.
 
 ## ⚙️ Installation
 
