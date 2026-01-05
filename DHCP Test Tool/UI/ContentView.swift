@@ -209,6 +209,10 @@ struct ContentView: View {
                 }
             }
         }
+//        .overlay(alignment: .bottomTrailing) {
+//            BetaTag()
+//                .padding(12)
+//        }
         .frame(minWidth: 520, minHeight: 500)
         .onAppear {
             refreshInterfaces()
